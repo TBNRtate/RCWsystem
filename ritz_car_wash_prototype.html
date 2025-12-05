@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ritz Car Wash Ecosystem Prototype</title>
+  <style>
+    :root {
+      --bg: #020617;
+      --panel: #0f172a;
+      --accent: #22d3ee;
+      --accent2: #a855f7;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.04);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+
+    header button {
+      flex: 1;
+      padding: 0.85rem 1rem;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.65rem;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      transition: all 0.15s ease;
+    }
+
+    header button.active {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #0b1224;
+      box-shadow: 0 10px 30px rgba(34, 211, 238, 0.3);
+    }
+
+    main {
+      padding: 1rem;
+    }
+
+    .system-screen {
+      display: none;
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    .system-screen.active {
+      display: block;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .grid.two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 0.9rem;
+      padding: 1rem;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    h2, h3, h4 { margin: 0 0 0.5rem; letter-spacing: 0.01em; }
+    p { margin: 0 0 0.5rem; color: var(--muted); }
+
+    .btn-row { display: flex; flex-wrap: wrap; gap: 0.65rem; margin: 0.5rem 0 0.75rem; }
+
+    .btn {
+      border: none;
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      background: #1f2937;
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    .btn:active { transform: translateY(1px); }
+
+    .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #0b1224; }
+    .btn.success { background: var(--success); color: #03120a; }
+    .btn.danger { background: var(--danger); color: #1a0b0b; }
+    .btn.warning { background: var(--warning); color: #1a1203; }
+    .btn.ghost { background: transparent; border-style: dashed; color: var(--muted); }
+
+    input, select, textarea {
+      width: 100%;
+      background: #0b1224;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text);
+      border-radius: 0.65rem;
+      padding: 0.75rem;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.25);
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.65rem 0.5rem; text-align: left; }
+    th { color: var(--muted); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.05em; }
+    tr:nth-child(even) { background: rgba(255, 255, 255, 0.03); }
+
+    .kiosk-buttons .btn { flex: 1 1 200px; font-size: 1.1rem; }
+    .large-text { font-size: 1.2rem; }
+
+    .status-pill {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header id="tab-bar">
+    <button data-target="pay-station" class="active">Pay Station</button>
+    <button data-target="tunnel">Tunnel</button>
+    <button data-target="office">Office</button>
+    <button data-target="cameras">Cameras</button>
+    <button data-target="dashboard">Server Dashboard</button>
+  </header>
+
+  <main class="grid">
+    <!-- Pay Station -->
+    <section id="pay-station" class="system-screen active">
+      <div class="grid two">
+        <div class="card">
+          <h2>Pay Station</h2>
+          <p>Touch-friendly kiosk to simulate purchase flows.</p>
+          <div id="pay-home" class="flow-step">
+            <div class="btn-row kiosk-buttons">
+              <button class="btn primary" onclick="startSingleWashFlow()">Single Wash</button>
+              <button class="btn primary" onclick="startUnlimitedFlow()">Unlimited Club</button>
+              <button class="btn primary" onclick="startVacuumFlow()">Vacuum Only</button>
+            </div>
+            <button class="btn ghost">Call Attendant</button>
+          </div>
+
+          <div id="tier-select" class="flow-step" style="display:none;">
+            <h3>Select Tier</h3>
+            <div class="btn-row kiosk-buttons">
+              <button class="btn" onclick="selectTier('Basic', 10)">Basic — $10</button>
+              <button class="btn" onclick="selectTier('Plus', 15)">Plus — $15</button>
+              <button class="btn" onclick="selectTier('Premium', 20)">Premium — $20</button>
+            </div>
+            <div id="vacuum-tier" style="display:none;" class="btn-row kiosk-buttons">
+              <button class="btn" onclick="selectTier('Vacuum Pass', 5)">Vacuum Pass — $5</button>
+            </div>
+          </div>
+
+          <div id="membership-form" class="flow-step" style="display:none;">
+            <h3>New Membership Signup</h3>
+            <div class="grid two">
+              <label>Name<input id="m-name" /></label>
+              <label>Plate<input id="m-plate" /></label>
+              <label>State<input id="m-state" maxlength="2" /></label>
+              <label>Phone<input id="m-phone" /></label>
+              <label>Email<input id="m-email" type="email" /></label>
+            </div>
+            <button class="btn primary" onclick="createMembershipAndVisit()">Create Membership and Pay</button>
+          </div>
+
+          <div id="payment-methods" class="flow-step" style="display:none;">
+            <h3>Select Payment Method</h3>
+            <div class="btn-row kiosk-buttons">
+              <button class="btn" onclick="choosePaymentMethod('card')">Card</button>
+              <button class="btn" onclick="choosePaymentMethod('cash')">Cash</button>
+              <button class="btn" onclick="choosePaymentMethod('giftcard')">Gift Card</button>
+            </div>
+          </div>
+
+          <div id="card-processing" class="flow-step" style="display:none;">
+            <h3>Processing Card...</h3>
+            <div class="btn-row kiosk-buttons">
+              <button class="btn success" onclick="simulateCardOutcome('approved')">Simulate: Approved</button>
+              <button class="btn danger" onclick="simulateCardOutcome('declined')">Simulate: Declined</button>
+              <button class="btn warning" onclick="simulateCardOutcome('network')">Simulate: Network Error</button>
+            </div>
+          </div>
+
+          <div id="cash-processing" class="flow-step" style="display:none;">
+            <h3>Cash Payment</h3>
+            <p>Insert bills. Coins not required.</p>
+            <div class="btn-row kiosk-buttons">
+              <button class="btn success" onclick="simulateCashOutcome('exact')">Paid full / exact amount</button>
+              <button class="btn warning" onclick="simulateCashOutcome('shortage')">Paid more, but system out of change</button>
+            </div>
+          </div>
+
+          <div id="gift-processing" class="flow-step" style="display:none;">
+            <h3>Gift Card</h3>
+            <p>We'll use any remaining balance.</p>
+            <div class="btn-row kiosk-buttons">
+              <button class="btn success" onclick="simulateGiftCardOutcome('enough')">Gift card has enough balance</button>
+              <button class="btn warning" onclick="simulateGiftCardOutcome('partial')">Gift card insufficient balance</button>
+            </div>
+            <div id="gift-partial" style="display:none;" class="card">
+              <p>Gift card covered: <span id="gift-covered"></span></p>
+              <p>Remaining due: <span id="gift-remaining"></span></p>
+              <div class="btn-row kiosk-buttons">
+                <button class="btn" onclick="finalizeMixedPayment('card')">Pay rest by card</button>
+                <button class="btn" onclick="finalizeMixedPayment('cash')">Pay rest by cash</button>
+                <button class="btn ghost" onclick="resetPayStation()">Cancel purchase</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="status-screen" class="flow-step" style="display:none;">
+            <h3 id="status-title">Status</h3>
+            <p id="status-message"></p>
+            <button class="btn" onclick="resetPayStation()">Back to Home</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Simulate Membership Lookup</h3>
+          <div class="grid two">
+            <label>Plate<input id="lookup-plate" /></label>
+            <label>State<input id="lookup-state" maxlength="2" /></label>
+          </div>
+          <button class="btn primary" onclick="simulateMembershipLookup()">Check membership</button>
+          <p id="lookup-result"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tunnel -->
+    <section id="tunnel" class="system-screen">
+      <div class="grid two">
+        <div class="card">
+          <h2>Membership confirmation queue</h2>
+          <div id="tunnel-queue"></div>
+        </div>
+        <div class="card">
+          <h2>Currently in tunnel</h2>
+          <div id="tunnel-current"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Office -->
+    <section id="office" class="system-screen">
+      <div class="card">
+        <h2>Member search</h2>
+        <div class="grid two">
+          <input id="search-query" placeholder="Search by plate or name" />
+          <button class="btn primary" onclick="searchMembers()">Search</button>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="card">
+          <h3>Results</h3>
+          <div id="member-results"></div>
+        </div>
+        <div class="card">
+          <h3>Member detail</h3>
+          <div id="member-detail">Select a member to view details.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cameras -->
+    <section id="cameras" class="system-screen">
+      <div class="card">
+        <h2>Cameras / LPR</h2>
+        <div class="grid two">
+          <input id="cam-plate" placeholder="Filter by plate" />
+          <select id="cam-zone">
+            <option value="">All zones</option>
+            <option value="entry">Entry</option>
+            <option value="tunnel">Tunnel</option>
+            <option value="exit">Exit</option>
+            <option value="vacuum">Vacuum</option>
+          </select>
+        </div>
+        <button class="btn primary" onclick="renderCameraEvents()">Filter</button>
+      </div>
+      <div class="card">
+        <div id="camera-events"></div>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard" class="system-screen">
+      <div class="grid two">
+        <div class="card">
+          <h2>Server Dashboard</h2>
+          <div id="dashboard-stats"></div>
+        </div>
+        <div class="card">
+          <h2>Recent activity</h2>
+          <div id="activity-log"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // --- Shared in-memory database ---
+    const db = {
+      members: [],
+      visits: [],
+      cameraEvents: [],
+      errors: [],
+      settings: { voucherDefaultAmount: 2.0, cameraDelaySeconds: 30 },
+      activityLog: [],
+    };
+
+    // --- Helpers ---
+    const now = () => new Date().toISOString();
+    const uid = (prefix) => `${prefix}_${Math.random().toString(36).slice(2, 6)}`;
+
+    function logEvent(message) {
+      const entry = { id: uid('log'), message, timestamp: now() };
+      db.activityLog.unshift(entry);
+      renderActivityLog();
+    }
+
+    function logError(type, message, visitId, plate) {
+      const error = { id: uid('err'), type, message, timestamp: now(), visitId, plate };
+      db.errors.push(error);
+      logEvent(`Error: ${type} for visit ${visitId || 'n/a'} (${plate || 'unknown'})`);
+    }
+
+    function seedData() {
+      const members = [
+        { id: 'm_001', name: 'Alice Johnson', plate: '8B1234', state: 'ID', tier: 'Premium', status: 'active', phone: '208-111-2222', email: 'alice@example.com', createdAt: now(), lastVisitAt: now() },
+        { id: 'm_002', name: 'Ben Carter', plate: '7C5678', state: 'ID', tier: 'Plus', status: 'active', phone: '208-333-4444', email: 'ben@example.com', createdAt: now() },
+        { id: 'm_003', name: 'Carla Diaz', plate: '9D9012', state: 'WA', tier: 'Basic', status: 'frozen', phone: '509-555-9999', email: 'carla@example.com', createdAt: now() },
+      ];
+      db.members.push(...members);
+
+      const visit = createVisit({
+        type: 'membership',
+        tier: 'Premium',
+        plate: '8B1234',
+        state: 'ID',
+        memberId: 'm_001',
+        amount: 0,
+        paymentMethod: 'membership',
+        paymentStatus: 'approved',
+      });
+      visit.completedAt = now();
+    }
+
+    function createMember(data) {
+      const member = { id: uid('m'), createdAt: now(), status: 'active', ...data };
+      db.members.push(member);
+      logEvent(`Membership ${member.id} created: ${member.name}, ${member.plate}, ${member.tier}`);
+      return member;
+    }
+
+    function createVisit({ type, tier, plate, state, memberId, amount, paymentMethod, paymentStatus }) {
+      const visit = {
+        id: uid('v'),
+        type,
+        tier,
+        plate,
+        state,
+        memberId,
+        amount,
+        paymentMethod,
+        paymentStatus,
+        startedAt: now(),
+      };
+      db.visits.push(visit);
+      logEvent(`Visit ${visit.id} created: plate ${plate}, ${tier}, ${type} wash, $${amount.toFixed(2)}`);
+      createCameraEventsForVisit(visit);
+      renderAll();
+      return visit;
+    }
+
+    function createCameraEventsForVisit(visit) {
+      const zones = ['entry', 'tunnel', 'exit'];
+      if (visit.type === 'vacuum' || visit.type === 'single' || visit.type === 'membership') zones.push('vacuum');
+      zones.forEach((zone, idx) => {
+        const ev = {
+          id: uid('c'),
+          plate: visit.plate,
+          state: visit.state,
+          zone,
+          timestamp: new Date(Date.now() + db.settings.cameraDelaySeconds * 1000 * idx).toISOString(),
+          visitId: visit.id,
+          confidence: Math.random() * 0.3 + 0.7,
+        };
+        db.cameraEvents.unshift(ev);
+        logEvent(`Camera event ${ev.id}: plate ${ev.plate} at zone ${zone} (conf ${ev.confidence.toFixed(2)})`);
+      });
+    }
+
+    // --- Tab navigation ---
+    function switchSystem(target) {
+      document.querySelectorAll('header button').forEach((btn) => btn.classList.toggle('active', btn.dataset.target === target));
+      document.querySelectorAll('.system-screen').forEach((screen) => screen.classList.toggle('active', screen.id === target));
+    }
+
+    document.querySelectorAll('#tab-bar button').forEach((btn) => {
+      btn.addEventListener('click', () => switchSystem(btn.dataset.target));
+    });
+
+    // --- Pay Station state ---
+    let currentFlow = { type: null, tier: null, amount: 0, paymentMethod: null, visit: null, member: null };
+
+    function resetPayStation() {
+      document.querySelectorAll('#pay-station .flow-step').forEach((el) => (el.style.display = 'none'));
+      document.getElementById('pay-home').style.display = 'block';
+      currentFlow = { type: null, tier: null, amount: 0, paymentMethod: null, visit: null, member: null };
+      document.getElementById('lookup-result').textContent = '';
+      document.getElementById('vacuum-tier').style.display = 'none';
+      document.getElementById('gift-partial').style.display = 'none';
+    }
+
+    function startSingleWashFlow() {
+      currentFlow.type = 'single';
+      document.getElementById('vacuum-tier').style.display = 'none';
+      showStep('tier-select');
+    }
+
+    function startUnlimitedFlow() {
+      currentFlow.type = 'membership';
+      document.getElementById('vacuum-tier').style.display = 'none';
+      showStep('tier-select');
+    }
+
+    function startVacuumFlow() {
+      currentFlow.type = 'vacuum';
+      document.getElementById('vacuum-tier').style.display = 'flex';
+      showStep('tier-select');
+    }
+
+    function selectTier(tier, price) {
+      currentFlow.tier = tier;
+      currentFlow.amount = price;
+      if (currentFlow.type === 'membership') {
+        showStep('membership-form');
+      } else {
+        showStep('payment-methods');
+      }
+    }
+
+    function showStep(id) {
+      document.querySelectorAll('#pay-station .flow-step').forEach((el) => (el.style.display = 'none'));
+      document.getElementById(id).style.display = 'block';
+    }
+
+    function createMembershipAndVisit() {
+      const name = document.getElementById('m-name').value.trim();
+      const plate = document.getElementById('m-plate').value.trim();
+      const state = document.getElementById('m-state').value.trim().toUpperCase();
+      if (!name || !plate || !state) {
+        alert('Name, plate, and state required');
+        return;
+      }
+      const member = createMember({ name, plate, state, tier: currentFlow.tier, phone: document.getElementById('m-phone').value, email: document.getElementById('m-email').value });
+      currentFlow.member = member;
+      currentFlow.type = 'membership';
+      showStep('payment-methods');
+    }
+
+    function choosePaymentMethod(method) {
+      currentFlow.paymentMethod = method;
+      if (!currentFlow.member) {
+        // create visit now to attach errors
+        currentFlow.visit = createVisit({ type: currentFlow.type, tier: currentFlow.tier, plate: 'UNK', state: 'ID', amount: currentFlow.amount, paymentMethod: method, paymentStatus: 'pending' });
+      }
+      if (method === 'card') showStep('card-processing');
+      if (method === 'cash') showStep('cash-processing');
+      if (method === 'giftcard') showStep('gift-processing');
+    }
+
+    function finalizeVisit(status, override) {
+      const visit = currentFlow.visit;
+      if (!visit) return;
+      visit.paymentStatus = status;
+      if (override) Object.assign(visit, override);
+      if (status === 'approved') {
+        visit.completedAt = now();
+        showStatus('Wash Ready', 'Payment approved / gate opening.');
+      } else if (status === 'declined') {
+        showStatus('Card Declined', 'Please try a different method.');
+      }
+      renderAll();
+    }
+
+    function simulateCardOutcome(type) {
+      if (!currentFlow.visit) return;
+      if (type === 'approved') finalizeVisit('approved');
+      if (type === 'declined') {
+        logError('card_declined', 'Card was declined', currentFlow.visit.id, currentFlow.visit.plate);
+        finalizeVisit('declined');
+      }
+      if (type === 'network') {
+        logError('network', 'Network issue', currentFlow.visit.id, currentFlow.visit.plate);
+        showStatus('Network Problem', 'Try again or use cash.');
+      }
+    }
+
+    function simulateCashOutcome(type) {
+      if (!currentFlow.visit) return;
+      if (type === 'exact') finalizeVisit('approved');
+      if (type === 'shortage') {
+        logError('change_shortage', 'Out of change, voucher issued', currentFlow.visit.id, currentFlow.visit.plate);
+        showStatus('Voucher issued', `Voucher amount: $${db.settings.voucherDefaultAmount.toFixed(2)}. Wash Ready.`);
+        finalizeVisit('approved');
+      }
+    }
+
+    function simulateGiftCardOutcome(type) {
+      if (!currentFlow.visit) return;
+      if (type === 'enough') finalizeVisit('approved');
+      if (type === 'partial') {
+        const covered = (currentFlow.amount * 0.6).toFixed(2);
+        const remaining = (currentFlow.amount - covered).toFixed(2);
+        document.getElementById('gift-covered').textContent = `$${covered}`;
+        document.getElementById('gift-remaining').textContent = `$${remaining}`;
+        document.getElementById('gift-partial').style.display = 'block';
+        currentFlow.visit.amount = parseFloat(remaining);
+      }
+    }
+
+    function finalizeMixedPayment(method) {
+      currentFlow.visit.paymentMethod = 'mixed';
+      currentFlow.paymentMethod = method;
+      if (method === 'card') simulateCardOutcome('approved');
+      else simulateCashOutcome('exact');
+    }
+
+    function showStatus(title, message) {
+      document.getElementById('status-title').textContent = title;
+      document.getElementById('status-message').textContent = message;
+      showStep('status-screen');
+    }
+
+    function simulateMembershipLookup() {
+      const plate = document.getElementById('lookup-plate').value.trim();
+      const state = document.getElementById('lookup-state').value.trim().toUpperCase();
+      const member = db.members.find((m) => m.plate.toLowerCase() === plate.toLowerCase() && m.state === state && m.status === 'active');
+      const result = document.getElementById('lookup-result');
+      if (member) {
+        const visit = createVisit({ type: 'membership', tier: member.tier, plate: member.plate, state: member.state, memberId: member.id, amount: 0, paymentMethod: 'membership', paymentStatus: 'approved' });
+        visit.completedAt = now();
+        member.lastVisitAt = visit.startedAt;
+        result.textContent = `Membership recognized for ${member.name}. Wash Ready.`;
+        showStatus('Membership recognized', 'Proceed to tunnel.');
+      } else {
+        result.textContent = 'No active membership found for this plate.';
+      }
+    }
+
+    // --- Tunnel ---
+    function renderTunnelQueue() {
+      const queue = db.visits.filter((v) => v.type === 'membership' && v.plateConfirmed !== true).slice(-5).reverse();
+      const container = document.getElementById('tunnel-queue');
+      container.innerHTML = queue.length
+        ? queue
+            .map(
+              (v) => `
+            <div class="card">
+              <div class="large-text">${v.plate} • ${v.state}</div>
+              <p>${v.tier} • ${new Date(v.startedAt).toLocaleTimeString()}</p>
+              <div class="btn-row">
+                <button class="btn success" onclick="confirmPlate('${v.id}')">✅ Plate correct</button>
+                <button class="btn" onclick="showFixPlate('${v.id}')">❌ Fix plate</button>
+              </div>
+              <div id="fix-${v.id}" style="display:none;" class="grid two">
+                <input id="new-plate-${v.id}" placeholder="New plate" />
+                <input id="new-state-${v.id}" placeholder="State" maxlength="2" />
+                <button class="btn primary" onclick="fixPlate('${v.id}')">Save</button>
+              </div>
+            </div>`
+            )
+            .join('')
+        : '<p>No memberships waiting.</p>';
+    }
+
+    function showFixPlate(id) {
+      document.getElementById(`fix-${id}`).style.display = 'grid';
+    }
+
+    function confirmPlate(visitId) {
+      const visit = db.visits.find((v) => v.id === visitId);
+      if (visit) {
+        visit.plateConfirmed = true;
+        logEvent(`Plate confirmed for visit ${visit.id}`);
+        renderAll();
+      }
+    }
+
+    function fixPlate(visitId) {
+      const visit = db.visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      const plate = document.getElementById(`new-plate-${visitId}`).value.trim();
+      const state = document.getElementById(`new-state-${visitId}`).value.trim().toUpperCase();
+      if (!plate || !state) return;
+      visit.plate = plate;
+      visit.state = state;
+      visit.plateConfirmed = true;
+      if (visit.memberId) {
+        const member = db.members.find((m) => m.id === visit.memberId);
+        if (member) {
+          member.plate = plate;
+          member.state = state;
+        }
+      }
+      logEvent(`Plate updated for visit ${visit.id} to ${plate}`);
+      renderAll();
+    }
+
+    function renderTunnelCurrent() {
+      const current = db.visits.slice(-3).reverse();
+      const container = document.getElementById('tunnel-current');
+      container.innerHTML = current
+        .map((v) => {
+          const status = v.completedAt ? 'Completed' : 'In progress';
+          return `<div class="card"><div class="large-text">${v.plate} (${v.state})</div><p>${v.type} • ${v.tier}</p><span class="status-pill">${status}</span></div>`;
+        })
+        .join('');
+    }
+
+    // --- Office ---
+    function searchMembers() {
+      const query = document.getElementById('search-query').value.toLowerCase();
+      const matches = db.members.filter((m) => m.plate.toLowerCase().includes(query) || m.name.toLowerCase().includes(query));
+      renderMemberResults(matches);
+    }
+
+    function renderMemberResults(list = db.members) {
+      const container = document.getElementById('member-results');
+      container.innerHTML = list.length
+        ? list
+            .map(
+              (m) => `<div class="card" onclick="showMemberDetail('${m.id}')">
+                <div class="large-text">${m.name}</div>
+                <p>${m.plate} • ${m.state} • ${m.tier}</p>
+                <span class="status-pill">${m.status}</span>
+              </div>`
+            )
+            .join('')
+        : '<p>No matches.</p>';
+    }
+
+    function showMemberDetail(memberId) {
+      const m = db.members.find((m) => m.id === memberId);
+      if (!m) return;
+      const visits = db.visits.filter((v) => v.memberId === m.id).slice(-5).reverse();
+      const container = document.getElementById('member-detail');
+      container.innerHTML = `
+        <div class="large-text">${m.name}</div>
+        <p>${m.plate} • ${m.state}</p>
+        <p>Tier: ${m.tier} | Status: ${m.status}</p>
+        <p>Phone: ${m.phone || '—'} | Email: ${m.email || '—'}</p>
+        <p>Created: ${new Date(m.createdAt).toLocaleString()}</p>
+        <p>Last visit: ${m.lastVisitAt ? new Date(m.lastVisitAt).toLocaleString() : '—'}</p>
+        <div class="btn-row">
+          <button class="btn" onclick="updateMemberStatus('${m.id}', 'canceled')">Cancel</button>
+          <button class="btn" onclick="updateMemberStatus('${m.id}', 'frozen')">Freeze</button>
+          <button class="btn" onclick="updateMemberStatus('${m.id}', 'active')">Reactivate</button>
+        </div>
+        <div class="btn-row">
+          Change tier:
+          <button class="btn" onclick="updateMemberTier('${m.id}', 'Basic')">Basic</button>
+          <button class="btn" onclick="updateMemberTier('${m.id}', 'Plus')">Plus</button>
+          <button class="btn" onclick="updateMemberTier('${m.id}', 'Premium')">Premium</button>
+        </div>
+        <h4>Recent visits</h4>
+        ${
+          visits.length
+            ? `<table><tr><th>Date</th><th>Type</th><th>Tier</th><th>Amount</th><th>Payment</th><th>Status</th></tr>${visits
+                .map(
+                  (v) => `<tr><td>${new Date(v.startedAt).toLocaleString()}</td><td>${v.type}</td><td>${v.tier}</td><td>$${v.amount.toFixed(2)}</td><td>${v.paymentMethod}</td><td>${v.paymentStatus}</td></tr>`
+                )
+                .join('')}</table>`
+            : '<p>No visits.</p>'
+        }
+      `;
+    }
+
+    function updateMemberStatus(id, status) {
+      const m = db.members.find((x) => x.id === id);
+      if (!m) return;
+      m.status = status;
+      logEvent(`Member ${id} status changed to ${status}`);
+      renderAll();
+      showMemberDetail(id);
+    }
+
+    function updateMemberTier(id, tier) {
+      const m = db.members.find((x) => x.id === id);
+      if (!m) return;
+      m.tier = tier;
+      logEvent(`Member ${id} tier changed to ${tier}`);
+      renderAll();
+      showMemberDetail(id);
+    }
+
+    // --- Cameras ---
+    function renderCameraEvents() {
+      const plateFilter = document.getElementById('cam-plate').value.toLowerCase();
+      const zoneFilter = document.getElementById('cam-zone').value;
+      const events = db.cameraEvents.filter((ev) => {
+        const plateMatch = !plateFilter || ev.plate.toLowerCase().includes(plateFilter);
+        const zoneMatch = !zoneFilter || ev.zone === zoneFilter;
+        return plateMatch && zoneMatch;
+      });
+      const table = events.length
+        ? `<table><tr><th>Timestamp</th><th>Plate</th><th>Zone</th><th>Confidence</th><th>Visit</th><th>Action</th></tr>${events
+            .map(
+              (ev) => `<tr><td>${new Date(ev.timestamp).toLocaleString()}</td><td>${ev.plate} • ${ev.state}</td><td>${ev.zone}</td><td>${(ev.confidence * 100).toFixed(0)}%</td><td>${ev.visitId || '—'}</td><td><button class="btn" onclick="jumpToVisit('${ev.visitId || ''}', '${ev.plate}')">View Visit</button></td></tr>`
+            )
+            .join('')}</table>`
+        : '<p>No events match filters.</p>';
+      document.getElementById('camera-events').innerHTML = table;
+    }
+
+    function jumpToVisit(visitId, plate) {
+      switchSystem('office');
+      document.getElementById('search-query').value = plate;
+      searchMembers();
+      if (visitId) {
+        const visit = db.visits.find((v) => v.id === visitId);
+        if (visit && visit.memberId) showMemberDetail(visit.memberId);
+      }
+    }
+
+    // --- Dashboard ---
+    function getTodayStats() {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const visitsToday = db.visits.filter((v) => new Date(v.startedAt) >= start);
+      const counts = {
+        total: visitsToday.length,
+        single: visitsToday.filter((v) => v.type === 'single').length,
+        membership: visitsToday.filter((v) => v.type === 'membership').length,
+        vacuum: visitsToday.filter((v) => v.type === 'vacuum').length,
+      };
+      const revenue = visitsToday
+        .filter((v) => v.paymentStatus === 'approved')
+        .reduce(
+          (acc, v) => {
+            acc.total += v.amount;
+            acc[v.type] = (acc[v.type] || 0) + v.amount;
+            return acc;
+          },
+          { total: 0, single: 0, membership: 0, vacuum: 0 }
+        );
+      const statusCounts = {
+        active: db.members.filter((m) => m.status === 'active').length,
+        frozen: db.members.filter((m) => m.status === 'frozen').length,
+        canceled: db.members.filter((m) => m.status === 'canceled').length,
+      };
+      const errorCounts = db.errors.reduce((acc, e) => ({ ...acc, [e.type]: (acc[e.type] || 0) + 1 }), {});
+      return { counts, revenue, statusCounts, errorCounts };
+    }
+
+    function renderDashboardStats() {
+      const { counts, revenue, statusCounts, errorCounts } = getTodayStats();
+      const html = `
+        <div class="grid two">
+          <div class="card">
+            <h4>Today's totals</h4>
+            <p>Total visits: ${counts.total}</p>
+            <p>Single washes: ${counts.single}</p>
+            <p>Membership visits: ${counts.membership}</p>
+            <p>Vacuum-only: ${counts.vacuum}</p>
+          </div>
+          <div class="card">
+            <h4>Membership stats</h4>
+            <p>Active: ${statusCounts.active}</p>
+            <p>Frozen: ${statusCounts.frozen}</p>
+            <p>Canceled: ${statusCounts.canceled}</p>
+          </div>
+          <div class="card">
+            <h4>Revenue</h4>
+            <p>Total: $${revenue.total.toFixed(2)}</p>
+            <p>Single: $${revenue.single.toFixed(2)}</p>
+            <p>Membership: $${revenue.membership.toFixed(2)}</p>
+            <p>Vacuum: $${revenue.vacuum.toFixed(2)}</p>
+          </div>
+          <div class="card">
+            <h4>Error counts</h4>
+            <p>Card declined: ${errorCounts.card_declined || 0}</p>
+            <p>Network: ${errorCounts.network || 0}</p>
+            <p>Giftcard insufficient: ${errorCounts.giftcard_insufficient || 0}</p>
+            <p>Change shortage: ${errorCounts.change_shortage || 0}</p>
+          </div>
+        </div>`;
+      document.getElementById('dashboard-stats').innerHTML = html;
+    }
+
+    function renderActivityLog() {
+      const html = db.activityLog
+        .slice(0, 12)
+        .map((log) => `<p>[${new Date(log.timestamp).toLocaleTimeString()}] ${log.message}</p>`)
+        .join('');
+      document.getElementById('activity-log').innerHTML = html || '<p>No activity yet.</p>';
+    }
+
+    // --- Global render ---
+    function renderAll() {
+      renderTunnelQueue();
+      renderTunnelCurrent();
+      renderMemberResults();
+      renderCameraEvents();
+      renderDashboardStats();
+      renderActivityLog();
+    }
+
+    // --- Init ---
+    window.onload = () => {
+      seedData();
+      resetPayStation();
+      renderAll();
+    };
+  </script>
+</body>
+</html>
